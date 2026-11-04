@@ -45,6 +45,19 @@ const ASSESSMENT = {
   noProgress: true,
 };
 
+// 登入帳號。這是前端的簡易登入，只能擋住一般瀏覽，不能保護網站內容；
+// 雜湊會隨網站公開，所以這裡的密碼不可與其他系統共用。
+const ACCOUNTS = [
+  {
+    account: 'admin',
+    name: '管理者',
+    salt: '8c175dc6f6342407a09bb8a0f1e7fbfd',
+    hash: '6943c5c18a4a7aba4801fd64e19ff75229de4de4ede875c2cc5bdbe7a6ed5e51',
+  },
+];
+const SESSION_KEY = 'training-session';
+const LOGIN_SUCCESS_DELAY = 600;
+
 // 個人筆記存在各自的瀏覽器（localStorage），只有本人看得到
 const NOTES_PAGE = { id: 'notes', title: '個人筆記' };
 const NOTES_KEY = 'training-notes';
@@ -108,8 +121,9 @@ const SCRIPT_RULES = [
 // 學習進度存在各自的瀏覽器（localStorage），不會傳到其他地方。
 const PROGRESS_KEY = 'training-progress';
 const PROGRESS_LEVELS = [0, 25, 50, 75, 100];
-const progress = loadProgress();
-const notes = loadNotes();
+let currentAccount = null;
+let progress = {};
+let notes = [];
 let editingNoteId = null;
 let notesFilterDate = null;
 
@@ -126,10 +140,27 @@ const searchBox = document.getElementById('search');
 const searchInput = document.getElementById('searchInput');
 const searchResults = document.getElementById('searchResults');
 const searchToggle = document.getElementById('searchToggle');
+const appRoot = document.getElementById('app');
+const loginRoot = document.getElementById('login');
+const loginForm = document.getElementById('loginForm');
+const loginError = document.getElementById('loginError');
+const loginShell = document.getElementById('loginShell');
+const loginSubmit = document.getElementById('loginSubmit');
+const mascot = document.getElementById('mascot');
+const mascotBubble = document.getElementById('mascotBubble');
+
+// 進度與筆記依帳號分開存；沒有帳號專屬資料時，沿用登入功能上線前的舊資料
+function accountKey(key) {
+  return `${key}:${currentAccount}`;
+}
+
+function readAccountData(key) {
+  return localStorage.getItem(accountKey(key)) ?? localStorage.getItem(key);
+}
 
 function loadProgress() {
   try {
-    return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {};
+    return JSON.parse(readAccountData(PROGRESS_KEY)) || {};
   } catch (error) {
     return {};
   }
@@ -137,7 +168,7 @@ function loadProgress() {
 
 function saveProgress() {
   try {
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    localStorage.setItem(accountKey(PROGRESS_KEY), JSON.stringify(progress));
     return true;
   } catch (error) {
     return false;
@@ -146,7 +177,7 @@ function saveProgress() {
 
 function loadNotes() {
   try {
-    const saved = JSON.parse(localStorage.getItem(NOTES_KEY));
+    const saved = JSON.parse(readAccountData(NOTES_KEY));
     return Array.isArray(saved) ? saved : [];
   } catch (error) {
     return [];
@@ -155,7 +186,7 @@ function loadNotes() {
 
 function saveNotes() {
   try {
-    localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+    localStorage.setItem(accountKey(NOTES_KEY), JSON.stringify(notes));
     return true;
   } catch (error) {
     return false;
@@ -261,7 +292,11 @@ function renderSidebar() {
     return `<div class="nav-group"><p class="nav-title">${escapeHtml(group.title)}</p><ul class="nav-list">${links}${externalLinks}</ul></div>`;
   }).join('');
 
-  document.getElementById('sidebarNav').innerHTML = `<div class="nav-group"><a class="nav-link is-top" href="#/" data-route="">${renderIcon('home')}首頁</a></div>${groups}${renderTopLink(ASSESSMENT)}${renderTopLink(NOTES_PAGE)}`;
+  document.getElementById('sidebarNav').innerHTML = `<div class="nav-group"><a class="nav-link is-top" href="#/" data-route="">${renderIcon('home')}首頁</a></div>${groups}${renderTopLink(ASSESSMENT)}${renderTopLink(NOTES_PAGE)}
+    <div class="nav-account">
+      <span class="nav-account-name">${escapeHtml(currentAccountName())}</span>
+      <button class="nav-logout" type="button" data-logout>登出</button>
+    </div>`;
 }
 
 function greeting() {
@@ -1025,7 +1060,135 @@ function updateCurrent(route) {
   }
 }
 
+function currentAccountName() {
+  const found = ACCOUNTS.find((item) => item.account === currentAccount);
+  return found ? found.name : '';
+}
+
+function readSession() {
+  try {
+    const saved = sessionStorage.getItem(SESSION_KEY);
+    return ACCOUNTS.some((item) => item.account === saved) ? saved : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeSession(account) {
+  try {
+    if (account) {
+      sessionStorage.setItem(SESSION_KEY, account);
+    } else {
+      sessionStorage.removeItem(SESSION_KEY);
+    }
+  } catch (error) {
+    // 無法記住登入狀態時，重新整理後需要再登入一次
+  }
+}
+
+async function hashPassword(salt, password) {
+  const data = new TextEncoder().encode(`${salt}:${password}`);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+// 登入頁的牙齒吉祥物：心情決定表情與對話框文字
+function setMascot(mood, message) {
+  mascot.dataset.mood = mood;
+  if (mascotBubble.textContent === message) return;
+  mascotBubble.textContent = message;
+  // 重新觸發對話框的彈出動畫
+  mascotBubble.style.animation = 'none';
+  void mascotBubble.offsetWidth;
+  mascotBubble.style.animation = '';
+}
+
+function mascotLook(length) {
+  const offset = (Math.min(length, 16) / 16) * 10 - 5;
+  mascot.style.setProperty('--look', `${offset}px`);
+}
+
+function shakeLogin() {
+  loginShell.classList.remove('is-shake');
+  void loginShell.offsetWidth;
+  loginShell.classList.add('is-shake');
+}
+
+function showLogin() {
+  document.title = '登入｜牙e通客戶成功培訓';
+  appRoot.hidden = true;
+  loginRoot.hidden = false;
+  loginError.textContent = '';
+  loginForm.reset();
+  loginSubmit.disabled = false;
+  mascotLook(0);
+  document.getElementById('loginAccount').focus();
+  setMascot('idle', `${greeting()}！今天也一起學習吧`);
+}
+
+function startSession(account) {
+  currentAccount = account;
+  progress = loadProgress();
+  notes = loadNotes();
+  loginRoot.hidden = true;
+  appRoot.hidden = false;
+  renderSidebar();
+  route(true);
+}
+
+function logout() {
+  writeSession(null);
+  currentAccount = null;
+  progress = {};
+  notes = [];
+  editingNoteId = null;
+  Object.assign(calendarState, createCalendarState());
+  closeSearch();
+  setMenuOpen(false);
+  main.innerHTML = '';
+  document.getElementById('sidebarNav').innerHTML = '';
+  history.replaceState(null, '', location.pathname + location.search);
+  showLogin();
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+  const account = loginForm.elements.account.value.trim().toLowerCase();
+  const password = loginForm.elements.password.value;
+  loginError.textContent = '';
+
+  if (!account || !password) {
+    loginError.textContent = '請輸入帳號和密碼。';
+    setMascot('sad', '還少填了一點喔');
+    shakeLogin();
+    return;
+  }
+  if (!window.crypto || !crypto.subtle) {
+    loginError.textContent = '這個網址無法使用登入功能，請改用 https 網址開啟。';
+    return;
+  }
+
+  const found = ACCOUNTS.find((item) => item.account === account);
+  if (found && await hashPassword(found.salt, password) === found.hash) {
+    writeSession(found.account);
+    loginForm.reset();
+    loginSubmit.disabled = true;
+    setMascot('happy', `歡迎回來，${found.name}！`);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setTimeout(() => startSession(found.account), reduced ? 0 : LOGIN_SUCCESS_DELAY);
+    return;
+  }
+
+  loginError.textContent = '帳號或密碼不正確。';
+  loginForm.elements.password.value = '';
+  loginForm.elements.password.focus();
+  setMascot('sad', '咦？再試一次看看');
+  shakeLogin();
+}
+
 function route(isFirstLoad) {
+  if (!currentAccount) return;
+
   const id = location.hash.replace(/^#\/?/, '');
   const [base, param] = id.split('/');
   let pageTitle = '';
@@ -1147,6 +1310,23 @@ document.addEventListener('keydown', (event) => {
 // 點目前所在頁面的連結時 hash 不會變，仍要收起手機選單
 sidebar.addEventListener('click', (event) => {
   if (event.target.closest('a')) setMenuOpen(false);
+  if (event.target.closest('[data-logout]')) logout();
+});
+
+loginForm.addEventListener('submit', handleLogin);
+
+const loginAccountInput = document.getElementById('loginAccount');
+const loginPasswordInput = document.getElementById('loginPassword');
+
+loginAccountInput.addEventListener('focus', () => setMascot('idle', '先輸入你的帳號'));
+loginAccountInput.addEventListener('input', () => {
+  mascotLook(loginAccountInput.value.length);
+  setMascot('idle', '先輸入你的帳號');
+});
+loginPasswordInput.addEventListener('focus', () => setMascot('shy', '放心，我不偷看！'));
+loginPasswordInput.addEventListener('input', () => setMascot('shy', '放心，我不偷看！'));
+loginShell.addEventListener('animationend', (event) => {
+  if (event.target === loginShell) loginShell.classList.remove('is-shake');
 });
 
 window.addEventListener('hashchange', () => route(false));
@@ -1157,5 +1337,9 @@ document.getElementById('topbarDate').textContent = new Date().toLocaleDateStrin
   weekday: 'long',
 });
 
-renderSidebar();
-route(true);
+const savedAccount = readSession();
+if (savedAccount) {
+  startSession(savedAccount);
+} else {
+  showLogin();
+}
