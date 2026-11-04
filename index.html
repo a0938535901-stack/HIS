@@ -16,42 +16,27 @@
 
   <section class="login" id="login" hidden>
     <div class="login-deco" aria-hidden="true">
-      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+      <span class="deco-aurora is-one"></span>
+      <span class="deco-aurora is-two"></span>
+      <span class="deco-aurora is-three"></span>
+      <svg class="deco-wave is-back" viewBox="0 0 1440 160" preserveAspectRatio="none"><path d="M0 80C120 40 240 40 360 80S600 120 720 80 960 40 1080 80 1320 120 1440 80V160H0Z"/></svg>
+      <svg class="deco-wave is-front" viewBox="0 0 1440 160" preserveAspectRatio="none"><path d="M0 100C120 60 240 60 360 100S600 140 720 100 960 60 1080 100 1320 140 1440 100V160H0Z"/></svg>
     </div>
     <div class="login-shell glass" id="loginShell">
-      <div class="login-panel" aria-hidden="true">
-        <p class="mascot-bubble" id="mascotBubble"></p>
-        <svg class="mascot" id="mascot" data-mood="idle" viewBox="0 0 200 200">
-          <g class="mascot-body">
-            <path transform="scale(.5)" fill="#ffffff" stroke="#0f52ba" stroke-width="10" stroke-linejoin="round"
-              d="M200 70C170 70 150 50 115 50C70 50 50 95 50 145C50 200 75 225 85 280C92 320 100 360 125 360C155 360 150 270 200 270C250 270 245 360 275 360C300 360 308 320 315 280C325 225 350 200 350 145C350 95 330 50 285 50C250 50 230 70 200 70Z"/>
-            <ellipse cx="55" cy="96" rx="9" ry="6" fill="#f9a8c9"/>
-            <ellipse cx="145" cy="96" rx="9" ry="6" fill="#f9a8c9"/>
-            <g class="eye-open">
-              <circle cx="72" cy="78" r="12" fill="#ffffff" stroke="#0f52ba" stroke-width="3"/>
-              <circle cx="128" cy="78" r="12" fill="#ffffff" stroke="#0f52ba" stroke-width="3"/>
-              <g class="pupils" fill="#0b2559">
-                <circle cx="72" cy="79" r="6"/>
-                <circle cx="128" cy="79" r="6"/>
-              </g>
-            </g>
-            <g class="eye-closed" fill="none" stroke="#0b2559" stroke-width="4" stroke-linecap="round">
-              <path d="M61 80q11 9 22 0"/>
-              <path d="M117 80q11 9 22 0"/>
-            </g>
-            <g fill="none" stroke="#0b2559" stroke-width="4" stroke-linecap="round">
-              <path class="mouth mouth-smile" d="M88 102q12 12 24 0"/>
-              <path class="mouth mouth-sad" d="M88 110q12-11 24 0"/>
-            </g>
-            <path class="mouth mouth-happy" d="M84 99h32q-2 20-16 20t-16-20z" fill="#0f52ba"/>
-          </g>
-        </svg>
+      <div class="login-panel">
+        <div class="login-brand">台灣牙e通</div>
+        <p class="mascot-bubble" id="mascotBubble" aria-hidden="true"></p>
+        <div class="mascot-stage" aria-hidden="true">
+          <span class="mascot-badge is-left">健保怎麼申報</span>
+          <span class="mascot-badge is-right">系統怎麼操作</span>
+          <svg class="mascot" id="mascot" data-mood="idle" viewBox="0 0 360 230"></svg>
+        </div>
         <p class="login-panel-title">一起把服務做得更好！</p>
       </div>
       <form class="login-card" id="loginForm" novalidate>
         <img class="login-logo" src="logo.png" alt="dentall 牙e通 logo">
-        <h1 class="login-title">牙e通客戶成功培訓</h1>
-        <p class="login-hint">請登入後開始學習</p>
+        <h1 class="login-title">客戶成功部<br>內部培訓</h1>
+        <p class="login-hint" id="loginHint">請登入後開始學習</p>
         <label class="login-field">
           <span>帳號</span>
           <span class="login-input">
@@ -68,6 +53,7 @@
         </label>
         <p class="login-error" id="loginError" role="alert"></p>
         <button class="button login-submit" id="loginSubmit" type="submit">登入</button>
+        <button class="login-mentor" id="loginAsMentor" type="button" hidden>以指導者身分進入</button>
         <p class="login-help">帳號或密碼有問題，請洽管理者。</p>
       </form>
     </div>
@@ -77,7 +63,7 @@
     <aside class="sidebar" id="sidebar">
       <a class="brand sidebar-brand" href="#/">
         <img class="brand-mark" src="logo.png" alt="">
-        牙e通客戶成功培訓
+        客戶成功培訓
       </a>
       <nav id="sidebarNav" aria-label="教育訓練大綱"></nav>
     </aside>
@@ -103,7 +89,17 @@
         <button class="search-toggle" id="searchToggle" type="button" aria-label="開啟搜尋" aria-expanded="false" aria-controls="search">
           <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></svg>
         </button>
-        <a class="script-button" id="scriptButton" href="#/script">客服話術轉換</a>
+        <div class="notify" id="notify" hidden>
+          <button class="notify-button" id="notifyButton" type="button" aria-label="指導者留言通知" aria-expanded="false" aria-controls="notifyPanel">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+            <span class="notify-badge" id="notifyBadge" hidden></span>
+          </button>
+          <div class="notify-panel" id="notifyPanel" hidden></div>
+        </div>
+        <div class="topbar-account">
+          <span class="topbar-account-name" id="topbarAccountName"></span>
+          <button class="topbar-logout" id="logoutButton" type="button">登出</button>
+        </div>
       </header>
       <main class="main" id="main" tabindex="-1"></main>
     </div>
