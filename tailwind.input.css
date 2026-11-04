@@ -1612,19 +1612,128 @@ a { color: inherit; }
   }
 }
 
+/* 動態效果 */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+@keyframes drift {
+  to { transform: translate(-3%, 2%) scale(1.06); }
+}
+
+@keyframes float {
+  50% { translate: 0 -8px; }
+}
+
+@keyframes sheen {
+  0%, 70% { transform: translateX(-120%) skewX(-18deg); }
+  100% { transform: translateX(320%) skewX(-18deg); }
+}
+
+@keyframes draw-arc {
+  from { stroke-dasharray: 0 100; }
+}
+
+@keyframes grow-bar {
+  from { width: 0; }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(.98);
+  }
+}
+
+/* 背景緩慢飄動 */
+body::before {
+  inset: -8%;
+  animation: drift 28s ease-in-out infinite alternate;
+}
+
+/* 換頁時卡片依序進場 */
+.bento > *,
+.page > * {
+  animation: rise-in .5s cubic-bezier(.2, .7, .2, 1) backwards;
+}
+
+.bento > :nth-child(2),
+.page > :nth-child(2) { animation-delay: .05s; }
+.bento > :nth-child(3),
+.page > :nth-child(3) { animation-delay: .1s; }
+.bento > :nth-child(4),
+.page > :nth-child(4) { animation-delay: .15s; }
+.bento > :nth-child(5),
+.page > :nth-child(5) { animation-delay: .2s; }
+.bento > :nth-child(6),
+.page > :nth-child(6) { animation-delay: .25s; }
+.bento > :nth-child(7) { animation-delay: .3s; }
+.bento > :nth-child(8) { animation-delay: .35s; }
+.bento > :nth-child(9) { animation-delay: .4s; }
+.bento > :nth-child(10) { animation-delay: .45s; }
+
+/* 首頁橫幅的插圖漂浮與光澤 */
+.hero-art { animation: float 6s ease-in-out infinite; }
+
+.hero::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent);
+  pointer-events: none;
+  animation: sheen 7s ease-in-out infinite;
+}
+
+/* 進度圖與長條從 0 長到目前的進度 */
+.donut-value,
+.overall-value { animation: draw-arc 1s cubic-bezier(.2, .7, .2, 1) .3s backwards; }
+
+.topic-bar span { animation: grow-bar 1s cubic-bezier(.2, .7, .2, 1) .3s backwards; }
+
+/* 滑過與點選的回饋 */
+.glass.tile,
+.stat {
+  transition: transform .2s, box-shadow .2s;
+}
+
+/* 日曆與筆記有輸入操作，滑過時不移動 */
+.glass.tile:not(.b-calendar, .b-notes):hover,
+.stat:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px rgba(15, 60, 140, .16);
+}
+
+.nav-link .icon { transition: transform .15s; }
+
+.nav-link:hover .icon { transform: translateX(2px) scale(1.1); }
+
+.cal-day { transition: background-color .15s, transform .15s; }
+
+.cal-day:hover { transform: scale(1.08); }
+
+.search-results { animation: pop-in .16s ease-out; }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 
-  .sidebar,
-  .nav-link,
-  .script-button,
-  .donut-tile,
-  .next-item,
-  .note-preview,
-  .button,
-  .b-assess { transition: none; }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 
   .script-button:hover,
   .donut-tile:hover,
-  .b-assess:hover { transform: none; }
+  .b-assess:hover,
+  .glass.tile:not(.b-calendar, .b-notes):hover,
+  .stat:hover,
+  .cal-day:hover,
+  .nav-link:hover .icon { transform: none; }
 }

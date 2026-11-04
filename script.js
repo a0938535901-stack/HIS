@@ -75,6 +75,7 @@ const ICONS = {
 const CALENDAR_EVENTS = [];
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const EVENT_ALERT_DAYS = 3;
+const COUNT_DURATION = 1000;
 
 // 各單元進度圖的漸層色（順序對應 --unit-1 ~ --unit-8）
 const UNIT_GRADIENTS = [
@@ -206,7 +207,7 @@ function renderDonut(percent, title, iconId, colorIndex) {
       <circle class="donut-track" cx="50" cy="50" r="40"/>
       ${arc}
       <g class="donut-icon" transform="translate(39 24) scale(.92)">${ICONS[iconId]}</g>
-      <text class="donut-label" x="50" y="62" text-anchor="middle" dominant-baseline="central">${percent}%</text>
+      <text class="donut-label" x="50" y="62" text-anchor="middle" dominant-baseline="central" data-count="${percent}" data-suffix="%">${percent}%</text>
     </svg>`;
 }
 
@@ -224,7 +225,7 @@ function renderOverallRing(percent) {
       </defs>
       <circle class="overall-track" cx="50" cy="50" r="42"/>
       ${arc}
-      <text class="overall-label" x="50" y="50" text-anchor="middle" dominant-baseline="central">${percent}%</text>
+      <text class="overall-label" x="50" y="50" text-anchor="middle" dominant-baseline="central" data-count="${percent}" data-suffix="%">${percent}%</text>
     </svg>`;
 }
 
@@ -334,15 +335,15 @@ function renderHome() {
     <section class="tile glass b-calendar" id="calendar" aria-label="日曆"></section>
     <section class="tile stat b-done">
       <div class="stat-head"><span class="stat-icon">${renderIcon('done')}</span><p class="tile-label">已完成</p></div>
-      <p class="stat-value">${done}<small>/ ${total} 單元</small></p>
+      <p class="stat-value"><span data-count="${done}">${done}</span><small>/ ${total} 單元</small></p>
     </section>
     <section class="tile stat b-doing">
       <div class="stat-head"><span class="stat-icon">${renderIcon('doing')}</span><p class="tile-label">進行中</p></div>
-      <p class="stat-value">${inProgress}<small>單元</small></p>
+      <p class="stat-value"><span data-count="${inProgress}">${inProgress}</span><small>單元</small></p>
     </section>
     <section class="tile stat b-todo">
       <div class="stat-head"><span class="stat-icon">${renderIcon('todo')}</span><p class="tile-label">未開始</p></div>
-      <p class="stat-value">${notStarted}<small>單元</small></p>
+      <p class="stat-value"><span data-count="${notStarted}">${notStarted}</span><small>單元</small></p>
     </section>
     <a class="tile b-assess" href="#/${ASSESSMENT.id}">
       <span class="stat-icon">${renderIcon(ASSESSMENT.id)}</span>
@@ -370,6 +371,26 @@ function renderHome() {
     </div>`;
 
   renderCalendar();
+  animateCounts();
+}
+
+// 數字從 0 跳到實際值；使用者偏好減少動態時直接顯示
+function animateCounts() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const items = [...main.querySelectorAll('[data-count]')];
+  const start = performance.now();
+
+  function tick(now) {
+    const progressRatio = Math.min((now - start) / COUNT_DURATION, 1);
+    const eased = 1 - (1 - progressRatio) ** 3;
+    items.forEach((item) => {
+      item.textContent = `${Math.round(Number(item.dataset.count) * eased)}${item.dataset.suffix || ''}`;
+    });
+    if (progressRatio < 1) requestAnimationFrame(tick);
+  }
+
+  requestAnimationFrame(tick);
 }
 
 function formatNoteTime(timestamp) {
