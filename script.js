@@ -8,7 +8,7 @@ const ASSESSMENT_STAGES = [
   { id: 'assessment-2', title: '第二次考核', day: 14, intro: '到職第 8–14 天的考核。', content: '' },
   { id: 'assessment-3', title: '第三次考核', day: 30, intro: '到職第 14–30 天的考核。', content: '' },
   { id: 'assessment-4', title: '第四次考核', day: 45, intro: '到職第 30–45 天的考核。', content: '' },
-  { id: 'assessment-5', title: '最後考核', day: 60, final: true, intro: '到職第 60 天的最後考核。', content: '' },
+  { id: 'assessment-5', title: '最後考核', day: 90, final: true, intro: '到職第 90 天（滿三個月）的最後考核。', content: '' },
 ];
 
 const OUTLINE = [
